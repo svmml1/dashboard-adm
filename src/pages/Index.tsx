@@ -12,8 +12,17 @@ export default function Index() {
 
   const totalSales = salesReport?.resumo.totalVendas ?? 0
   const confirmed = salesReport?.resumo.totalPagas ?? 0
-  const totalBruto = salesReport?.resumo.totalArrecadadoBruto ?? 0
-  const totalLiquido = salesReport?.resumo.totalLiquido ?? 0
+
+  const vendas = salesReport?.vendas ?? []
+  const valorDireto = vendas
+    .filter((v) => v.metodoPagamento === 'Direto')
+    .reduce((acc, v) => acc + v.valor, 0)
+  const rawBruto = salesReport?.resumo.totalArrecadadoBruto ?? 0
+  const rawLiquido = salesReport?.resumo.totalLiquido ?? 0
+  const taxaRatio = rawBruto > 0 ? (rawBruto - rawLiquido) / rawBruto : 0
+  const totalBruto = rawBruto - valorDireto
+  const totalLiquido = totalBruto * (1 - taxaRatio)
+
   const recentSales = salesReport?.vendas.slice(0, 5) ?? []
 
   const saldoDisponivel = walletSummary?.saldoDisponivel ?? 0
