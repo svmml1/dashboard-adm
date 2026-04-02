@@ -6,9 +6,12 @@ import useMainStore from '@/stores/main'
 import DashboardChart from '@/components/DashboardChart'
 import { PageLoader } from '@/components/PageLoader'
 import { formatCurrency } from '@/lib/utils'
+import { useEffect } from 'react'
 
 export default function Index() {
-  const { salesReport, salesLoading, walletSummary, walletLoading } = useMainStore()
+  const { salesReport, salesLoading, walletSummary, walletLoading, refreshWallet } = useMainStore()
+
+  useEffect(() => { refreshWallet() }, [])
 
   const totalSales = salesReport?.resumo.totalVendas ?? 0
   const confirmed = salesReport?.resumo.totalPagas ?? 0

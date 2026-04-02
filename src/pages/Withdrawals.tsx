@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Card,
   CardContent,
@@ -58,7 +58,7 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; label: string; colo
 }
 
 export default function Withdrawals() {
-  const { walletSummary, walletLoading, withdrawals, requestWithdrawal } = useMainStore()
+  const { walletSummary, walletLoading, withdrawals, requestWithdrawal, refreshWallet } = useMainStore()
   const [amount, setAmount] = useState('')
   const [chavePix, setChavePix] = useState('')
   const [tipoChave, setTipoChave] = useState<PixTipoChave>('CPF')
@@ -66,6 +66,8 @@ export default function Withdrawals() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => { refreshWallet() }, [])
 
   const saldoDisponivel = walletSummary?.saldoDisponivel ?? 0
 
