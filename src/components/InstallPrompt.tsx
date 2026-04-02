@@ -72,7 +72,7 @@ export function InstallPrompt() {
       {/* Top hero */}
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-8 text-center">
         <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-zinc-900 shadow-2xl ring-1 ring-white/10">
-          <img src="/skip.png" alt="App icon" className="h-16 w-16 rounded-2xl object-cover" />
+          <img src="/icon-192.png" alt="App icon" className="h-16 w-16 rounded-2xl object-cover" />
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">Dashboard ADM</h1>
