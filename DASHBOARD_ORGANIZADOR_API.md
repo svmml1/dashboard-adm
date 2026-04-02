@@ -11,10 +11,10 @@ Todas as rotas exigem o header:
 Authorization: Bearer {token}
 ```
 
-O token é obtido no login:
+Login para obter o token:
 
 ```http
-POST /api/modules/auth/login
+POST /api/auth/login
 Content-Type: application/json
 
 {
@@ -30,20 +30,50 @@ Content-Type: application/json
   "data": {
     "token": "eyJhbGci...",
     "user": {
-      "userId": "abc123",
+      "id": "PZAznWeQMM7ZRdhLCl8Q",
+      "name": "admin",
       "email": "email@parque.com",
-      "name": "João Parque",
-      "role": "user"
+      "role": "admin"
     }
   }
 }
 ```
 
+> O `token` deve ser enviado em todas as chamadas como `Authorization: Bearer {token}`.
+
+---
+
+## ⚠️ Pré-requisito: evento precisa ter `organizerId`
+
+Eventos criados **antes** de 02/04/2026 não têm `organizerId`. Eles **não aparecem** em `meus-eventos` e retornam erro 403 em `vendas/:eventId`.
+
+**Para vincular um evento antigo ao parque, use (somente admin):**
+
+```http
+PATCH /api/wallet/admin/evento/{eventId}/organizador
+Authorization: Bearer {token_admin}
+Content-Type: application/json
+
+{
+  "organizerId": "PZAznWeQMM7ZRdhLCl8Q"
+}
+```
+
+Resposta:
+```json
+{
+  "success": true,
+  "message": "Evento 8PSxxFQJZboSjV7FlZRJ vinculado ao organizador PZAznWeQMM7ZRdhLCl8Q"
+}
+```
+
+Eventos **novos** já recebem o `organizerId` automaticamente na criação.
+
 ---
 
 ## 1. Meus Eventos
 
-Lista todos os eventos vinculados ao organizador autenticado.
+Lista todos os eventos onde `organizerId` é igual ao `userId` do token.
 
 ```http
 GET /api/wallet/meus-eventos
@@ -54,27 +84,32 @@ Authorization: Bearer {token}
 ```json
 {
   "success": true,
-  "total": 2,
+  "total": 1,
   "data": [
     {
-      "id": "XtjYZugzj9vWU3T5O2xu",
-      "nome": "Vaquejada Parque Otaviano 2026",
+      "id": "8PSxxFQJZboSjV7FlZRJ",
+      "nome": "5ª Vaquejada Genesio Araujo",
       "status": "active",
-      "local": "Parque Otaviano Pessoa - Fortaleza/CE",
-      "startDate": "2026-05-10T00:00:00.000Z",
-      "endDate": "2026-05-12T00:00:00.000Z",
+      "local": "5ª Vaquejada Genesio Araujo",
+      "startDate": { "_seconds": 1754352000, "_nanoseconds": 0 },
+      "endDate":   { "_seconds": 1754697600, "_nanoseconds": 0 },
       "valorSenha": 900
     }
   ]
 }
 ```
 
+> `startDate` e `endDate` vêm como objeto Firestore Timestamp. Converter no front:
+> ```js
+> new Date(startDate._seconds * 1000).toLocaleDateString('pt-BR')
+> ```
+
 ---
 
 ## 2. Relatório de Vendas de um Evento
 
-Retorna todas as senhas vendidas, resumo financeiro e detalhamento por dia/método.
-Só retorna dados se o evento pertencer ao organizador autenticado (403 caso contrário).
+Retorna todas as senhas do evento com resumo financeiro por dia e por método.
+**Retorna 403 se o evento não pertencer ao organizador do token.**
 
 ```http
 GET /api/wallet/vendas/{eventId}
@@ -86,36 +121,38 @@ Authorization: Bearer {token}
 {
   "success": true,
   "evento": {
-    "id": "XtjYZugzj9vWU3T5O2xu",
-    "nome": "Vaquejada Parque Otaviano 2026",
+    "id": "8PSxxFQJZboSjV7FlZRJ",
+    "nome": "5ª Vaquejada Genesio Araujo",
     "status": "active",
-    "local": "Parque Otaviano Pessoa - Fortaleza/CE",
+    "local": "5ª Vaquejada Genesio Araujo",
+    "startDate": { "_seconds": 1754352000, "_nanoseconds": 0 },
+    "endDate":   { "_seconds": 1754697600, "_nanoseconds": 0 },
     "valorSenha": 900
   },
   "resumo": {
-    "totalVendas": 42,
-    "totalPagas": 40,
-    "totalAguardando": 2,
-    "totalArrecadadoBruto": 37800.00,
-    "taxaPlataforma": 1134.00,
-    "totalLiquido": 36666.00,
+    "totalVendas": 6,
+    "totalPagas": 6,
+    "totalAguardando": 0,
+    "totalArrecadadoBruto": 5400.00,
+    "taxaPlataforma": 162.00,
+    "totalLiquido": 5238.00,
     "resumoPorDia": {
-      "quarta-feira": { "pagas": 15, "aguardando": 1, "arrecadado": 13500.00 },
-      "quinta-feira": { "pagas": 14, "aguardando": 1, "arrecadado": 12600.00 },
-      "sexta-feira":  { "pagas": 11, "aguardando": 0, "arrecadado": 9900.00 }
+      "quarta-feira": { "pagas": 2, "aguardando": 0, "arrecadado": 1800.00 },
+      "quinta-feira": { "pagas": 2, "aguardando": 0, "arrecadado": 1800.00 },
+      "sexta-feira":  { "pagas": 1, "aguardando": 0, "arrecadado": 900.00 },
+      "sabado":       { "pagas": 1, "aguardando": 0, "arrecadado": 900.00 }
     },
     "resumoPorMetodo": {
-      "PIX_EFI":    25200.00,
-      "BOLETO_EFI": 9000.00,
-      "CREDIT_CARD": 3600.00
+      "PIX_EFI": 3600.00,
+      "Direto":  1800.00
     }
   },
   "vendas": [
     {
       "dia": "quarta-feira",
-      "senha": 42,
-      "vaqueiro": "Marcos Silva",
-      "categoria": "Amador",
+      "senha": 25,
+      "vaqueiro": "João Silva",
+      "categoria": "Profissional",
       "cavaloPuxa": "Relâmpago RMV",
       "cavaloEsteira": "Trovão do Vale",
       "nomeEsteira": "Haras Estrela",
@@ -124,14 +161,47 @@ Authorization: Bearer {token}
       "metodoPagamento": "PIX_EFI",
       "statusPagamento": "PAGO",
       "valor": 900,
-      "horario": "2026-04-01T21:16:58.000Z",
-      "pagamentoConfirmadoEm": "2026-04-01T21:17:19.000Z"
+      "horario": "2026-04-02T18:19:32.000Z",
+      "pagamentoConfirmadoEm": "2026-04-02T18:19:55.000Z"
+    },
+    {
+      "dia": "quinta-feira",
+      "senha": 170,
+      "vaqueiro": "Pedro Santos",
+      "categoria": "Amador",
+      "cavaloPuxa": "Cavalo A",
+      "cavaloEsteira": "Cavalo B",
+      "nomeEsteira": "Haras XYZ",
+      "userId": "lDBqQYavevsxwFOCmR6M",
+      "paymentId": null,
+      "metodoPagamento": "Direto",
+      "statusPagamento": "PAGO",
+      "valor": 0,
+      "horario": "2026-04-02T18:19:33.000Z",
+      "pagamentoConfirmadoEm": null
     }
   ]
 }
 ```
 
-> **statusPagamento possíveis:** `PAGO`, `CONFIRMADA`, `AGUARDANDO`, `EXPIRADO`
+**Sobre `metodoPagamento`:**
+
+| Valor | Origem |
+|---|---|
+| `PIX_EFI` | Pago via PIX pelo app |
+| `BOLETO_EFI` | Boleto bancário |
+| `Direto` | Reserva feita manualmente pelo admin/secretaria |
+
+**Sobre `statusPagamento`:**
+
+| Valor | Significado |
+|---|---|
+| `PAGO` | Confirmado via EFI/ASAAS |
+| `CONFIRMADA` | Confirmado via webhook EFI |
+| `AGUARDANDO` | PIX/Boleto gerado, aguardando pagamento |
+| `EXPIRADO` | Não pagou no prazo — senha foi liberada |
+
+> Reservas diretas (`Direto`) têm `valor: 0` e `pagamentoConfirmadoEm: null` por definição.
 
 ---
 
@@ -147,18 +217,20 @@ Authorization: Bearer {token}
 {
   "success": true,
   "data": {
-    "eventOwnerId": "abc123",
-    "saldoDisponivel": 36666.00,
+    "eventOwnerId": "PZAznWeQMM7ZRdhLCl8Q",
+    "saldoDisponivel": 5238.00,
     "saldoPendente": 0,
-    "totalRecebido": 36666.00,
+    "totalRecebido": 5238.00,
     "totalSacado": 0
   }
 }
 ```
 
+> Saldo é creditado automaticamente a cada pagamento PIX/boleto confirmado. Reservas diretas (`valor: 0`) não geram crédito.
+
 ---
 
-## 4. Histórico de Créditos (todas as vendas creditadas)
+## 4. Histórico de Transações
 
 ```http
 GET /api/wallet/transacoes
@@ -166,17 +238,22 @@ GET /api/wallet/transacoes?limit=100
 Authorization: Bearer {token}
 ```
 
+```http
+GET /api/wallet/transacoes/{eventId}
+Authorization: Bearer {token}
+```
+
 **Resposta:**
 ```json
 {
   "success": true,
-  "total": 40,
+  "total": 4,
   "data": [
     {
       "id": "txId123",
-      "eventId": "XtjYZugzj9vWU3T5O2xu",
+      "eventId": "8PSxxFQJZboSjV7FlZRJ",
       "paymentId": "VAQ17750...",
-      "senhas": [1, 2],
+      "senhas": [25, 10],
       "dia": "quarta-feira",
       "valorBruto": 1800.00,
       "taxaPlataforma": 54.00,
@@ -184,7 +261,7 @@ Authorization: Bearer {token}
       "tipo": "CREDITO",
       "status": "DISPONIVEL",
       "descricao": "2 senha(s) vendida(s) — quarta-feira",
-      "createdAt": "2026-04-01T21:17:20.000Z"
+      "createdAt": "2026-04-02T18:19:55.000Z"
     }
   ]
 }
@@ -192,18 +269,7 @@ Authorization: Bearer {token}
 
 ---
 
-## 5. Créditos de um Evento Específico
-
-```http
-GET /api/wallet/transacoes/{eventId}
-Authorization: Bearer {token}
-```
-
-Mesma estrutura da rota acima, filtrada por evento.
-
----
-
-## 6. Solicitar Saque
+## 5. Solicitar Saque
 
 ```http
 POST /api/wallet/saque
@@ -211,42 +277,34 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "valor": 36666.00,
+  "valor": 5238.00,
   "chavePix": "email@parque.com",
   "tipoChave": "EMAIL",
   "nomeTitular": "João Parque LTDA"
 }
 ```
 
-> `tipoChave` aceita: `CPF`, `CNPJ`, `EMAIL`, `TELEFONE`, `ALEATORIA`
+> `tipoChave`: `CPF`, `CNPJ`, `EMAIL`, `TELEFONE`, `ALEATORIA`
 
-**Resposta sucesso:**
+**Sucesso (200):**
 ```json
-{
-  "success": true,
-  "saqueId": "saqueXyz123",
-  "message": "Saque solicitado com sucesso"
-}
+{ "success": true, "saqueId": "saqueXyz123", "message": "Saque solicitado com sucesso" }
 ```
 
-**Resposta saldo insuficiente (400):**
+**Saldo insuficiente (400):**
 ```json
-{
-  "success": false,
-  "error": "Saldo insuficiente. Disponível: R$ 500.00"
-}
+{ "success": false, "error": "Saldo insuficiente. Disponível: R$ 500.00" }
 ```
 
 ---
 
-## 7. Histórico de Saques
+## 6. Histórico de Saques
 
 ```http
 GET /api/wallet/saques
 Authorization: Bearer {token}
 ```
 
-**Resposta:**
 ```json
 {
   "success": true,
@@ -254,7 +312,7 @@ Authorization: Bearer {token}
   "data": [
     {
       "id": "saqueXyz123",
-      "valor": 36666.00,
+      "valor": 5238.00,
       "chavePix": "email@parque.com",
       "tipoChave": "EMAIL",
       "nomeTitular": "João Parque LTDA",
@@ -265,70 +323,71 @@ Authorization: Bearer {token}
 }
 ```
 
-> **Status do saque:** `SOLICITADO` → `PROCESSANDO` → `PAGO` | `FALHOU` | `CANCELADO`
+> Ciclo de status: `SOLICITADO` → `PROCESSANDO` → `PAGO` | `FALHOU` | `CANCELADO`
 
 ---
 
-## Rotas Admin (somente role: `admin`)
+## Rotas Admin
 
-### Listar saques pendentes
 ```http
+# Vincular evento antigo ao organizador
+PATCH /api/wallet/admin/evento/{eventId}/organizador
+Body: { "organizerId": "userId_do_parque" }
+
+# Saques pendentes para processar
 GET /api/wallet/admin/saques-pendentes
-Authorization: Bearer {token_admin}
-```
 
-### Atualizar status de um saque
-```http
+# Atualizar status de saque
 PATCH /api/wallet/admin/saque/{saqueId}
-Authorization: Bearer {token_admin}
-Content-Type: application/json
+Body: { "status": "PAGO", "observacao": "PIX enviado" }
 
-{
-  "status": "PAGO",
-  "observacao": "PIX enviado às 14h"
-}
-```
-
-> `status` aceita: `PROCESSANDO`, `PAGO`, `FALHOU`, `CANCELADO`
-> Se `FALHOU` ou `CANCELADO`, o saldo é devolvido automaticamente ao organizador.
-
-### Ver todas as wallets
-```http
+# Ver todas as wallets
 GET /api/wallet/admin/wallets
-Authorization: Bearer {token_admin}
 ```
 
 ---
 
-## Fluxo sugerido para o Dashboard
+## Fluxo do Front (passo a passo)
 
 ```
-1. Login → guarda token
-2. GET /api/wallet/meus-eventos → lista os eventos do organizador
-3. Usuário seleciona um evento
-4. GET /api/wallet/vendas/{eventId} → mostra tabela de vendas + resumo financeiro
-5. GET /api/wallet/saldo → mostra saldo disponível para saque
-6. Usuário clica em "Solicitar Saque"
-7. POST /api/wallet/saque → exibe confirmação
-8. GET /api/wallet/saques → mostra histórico de saques e status atual
+1. POST /api/auth/login → guarda token + user.id
+
+2. GET /api/wallet/meus-eventos
+   → lista eventos onde organizerId == userId
+   → se vazio: evento antigo, admin precisa vincular via PATCH admin/evento/:id/organizador
+
+3. Usuário clica em um evento
+   → GET /api/wallet/vendas/{eventId}
+   → exibe tabela de senhas com filtros por dia/categoria/método
+   → exibe resumo: totalVendas, totalPagas, totalLiquido
+
+4. GET /api/wallet/saldo
+   → exibe saldo disponível para saque
+
+5. Usuário clica em "Solicitar Saque"
+   → POST /api/wallet/saque
+   → exibe confirmação ou erro de saldo insuficiente
+
+6. GET /api/wallet/saques
+   → exibe histórico de saques com status atual
 ```
 
 ---
 
-## Campos de statusPagamento para filtros na tabela
+## Tratamento de erros
 
-| Valor | Significado |
+| HTTP | Motivo |
 |---|---|
-| `PAGO` | Confirmado via ASAAS/EFI |
-| `CONFIRMADA` | Confirmado via webhook EFI |
-| `AGUARDANDO` | PIX/Boleto gerado, aguardando pagamento |
-| `EXPIRADO` | Não pagou no prazo — senha foi liberada |
+| `401` | Token ausente ou expirado |
+| `403` | Evento não pertence ao organizador do token |
+| `400` | Saldo insuficiente no saque / dados inválidos |
+| `500` | Erro interno (ver campo `error` na resposta) |
+
+```json
+{ "success": false, "error": "Acesso negado: este evento não pertence ao seu usuário" }
+```
+
+
+Base URL produção: `https://api-3sxev7xp7q-uc.a.run.app`
 
 ---
-
-## Observações
-
-- O `taxaPlataforma` (3%) já é descontado automaticamente no momento da confirmação do pagamento
-- O `totalLiquido` no resumo é o que o organizador tem direito a receber
-- O saldo na wallet é creditado imediatamente após confirmação do pagamento
-- Não há delay entre pagamento confirmado e saldo disponível para saque

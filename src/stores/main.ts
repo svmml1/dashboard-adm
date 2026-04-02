@@ -78,12 +78,15 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await salesService.getEventos()
       setEventos(data)
-      // auto-select first event and load its sales
       if (data.length > 0) {
         setSelectedEventId(data[0].id)
       }
-    } catch {
-      // silently fail — user stays logged in
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        authService.logout()
+        setUser(null)
+      }
+      // keep eventos empty, user can retry via refresh button
     } finally {
       setEventosLoading(false)
     }
@@ -95,8 +98,12 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await salesService.getVendas(eventId)
       setSalesReport(data)
-    } catch {
+    } catch (err) {
       setSalesReport(null)
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        authService.logout()
+        setUser(null)
+      }
     } finally {
       setSalesLoading(false)
     }

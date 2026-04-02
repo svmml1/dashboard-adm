@@ -67,9 +67,12 @@ const getMetodoLabel = (metodo: string) => {
     case 'PIX_EFI': return 'PIX'
     case 'BOLETO_EFI': return 'Boleto'
     case 'CREDIT_CARD': return 'Cartão'
+    case 'Direto': return 'Direto (Admin)'
     default: return metodo
   }
 }
+
+const getValor = (sale: VendaDia) => sale.metodoPagamento === 'Direto' ? 0 : sale.valor
 
 export default function Sales() {
   const { eventos, eventosLoading, salesReport, salesLoading, selectedEventId, loadSales } = useMainStore()
@@ -89,11 +92,23 @@ export default function Sales() {
     })
   }, [vendas, search, statusFilter])
 
+  const resumoCorrigido = useMemo(() => {
+    if (!salesReport) return null
+    const r = salesReport.resumo
+    const valorDireto = vendas
+      .filter((v) => v.metodoPagamento === 'Direto')
+      .reduce((acc, v) => acc + v.valor, 0)
+    const bruto = r.totalArrecadadoBruto - valorDireto
+    const taxa = r.totalArrecadadoBruto > 0 ? r.taxaPlataforma * (bruto / r.totalArrecadadoBruto) : 0
+    const liquido = bruto - taxa
+    return { ...r, totalArrecadadoBruto: bruto, taxaPlataforma: taxa, totalLiquido: liquido }
+  }, [salesReport, vendas])
+
   const handleExportCSV = () => {
     if (!filteredSales.length) return
     const header = 'Senha,Vaqueiro,Categoria,Dia,Valor,Status,Método'
     const rows = filteredSales.map((s) =>
-      `${s.senha},"${s.vaqueiro}","${s.categoria}","${s.dia}",${s.valor},${getStatusLabel(s.statusPagamento)},${getMetodoLabel(s.metodoPagamento)}`
+      `${s.senha},"${s.vaqueiro}","${s.categoria}","${s.dia}",${getValor(s)},${getStatusLabel(s.statusPagamento)},${getMetodoLabel(s.metodoPagamento)}`
     )
     const csv = [header, ...rows].join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -117,7 +132,7 @@ export default function Sales() {
       'Cavalo Puxa': s.cavaloPuxa,
       'Cavalo Esteira': s.cavaloEsteira,
       Haras: s.nomeEsteira,
-      Valor: s.valor,
+      Valor: getValor(s),
       Método: getMetodoLabel(s.metodoPagamento),
       Status: getStatusLabel(s.statusPagamento),
       Horário: s.horario ? new Date(s.horario).toLocaleString('pt-BR') : '',
@@ -127,14 +142,14 @@ export default function Sales() {
     const wb = utils.book_new()
     utils.book_append_sheet(wb, ws, 'Vendas')
 
-    if (salesReport) {
+    if (salesReport && resumoCorrigido) {
       const resumoRows = [
-        { Item: 'Total de Vendas', Valor: salesReport.resumo.totalVendas },
-        { Item: 'Pagas', Valor: salesReport.resumo.totalPagas },
-        { Item: 'Aguardando', Valor: salesReport.resumo.totalAguardando },
-        { Item: 'Arrecadado Bruto', Valor: salesReport.resumo.totalArrecadadoBruto },
-        { Item: 'Taxa Plataforma', Valor: salesReport.resumo.taxaPlataforma },
-        { Item: 'Líquido', Valor: salesReport.resumo.totalLiquido },
+        { Item: 'Total de Vendas', Valor: resumoCorrigido.totalVendas },
+        { Item: 'Pagas', Valor: resumoCorrigido.totalPagas },
+        { Item: 'Aguardando', Valor: resumoCorrigido.totalAguardando },
+        { Item: 'Arrecadado Bruto', Valor: resumoCorrigido.totalArrecadadoBruto },
+        { Item: 'Taxa Plataforma', Valor: resumoCorrigido.taxaPlataforma },
+        { Item: 'Líquido', Valor: resumoCorrigido.totalLiquido },
       ]
       const wsResumo = utils.json_to_sheet(resumoRows)
       utils.book_append_sheet(wb, wsResumo, 'Resumo')
@@ -157,8 +172,8 @@ export default function Sales() {
     doc.setTextColor(120)
     doc.text(`Exportado em ${new Date().toLocaleDateString('pt-BR')}`, 14, 22)
 
-    if (salesReport) {
-      const r = salesReport.resumo
+    if (salesReport && resumoCorrigido) {
+      const r = resumoCorrigido
       doc.setTextColor(0)
       doc.setFontSize(9)
       doc.text(`Total: ${r.totalVendas}  |  Pagas: ${r.totalPagas}  |  Aguardando: ${r.totalAguardando}  |  Bruto: ${formatCurrency(r.totalArrecadadoBruto)}  |  Taxa: ${formatCurrency(r.taxaPlataforma)}  |  Líquido: ${formatCurrency(r.totalLiquido)}`, 14, 28)
@@ -175,7 +190,7 @@ export default function Sales() {
         s.dia,
         s.cavaloPuxa,
         s.cavaloEsteira,
-        formatCurrency(s.valor),
+        formatCurrency(getValor(s)),
         getMetodoLabel(s.metodoPagamento),
         getStatusLabel(s.statusPagamento),
       ]),
@@ -240,7 +255,7 @@ export default function Sales() {
         </div>
 
         {/* Summary cards */}
-        {salesReport && (
+        {salesReport && resumoCorrigido && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
@@ -267,8 +282,8 @@ export default function Sales() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(salesReport.resumo.totalArrecadadoBruto)}</div>
-                <p className="text-xs text-muted-foreground">Taxa: {formatCurrency(salesReport.resumo.taxaPlataforma)}</p>
+                <div className="text-2xl font-bold">{formatCurrency(resumoCorrigido.totalArrecadadoBruto)}</div>
+                <p className="text-xs text-muted-foreground">Taxa: {formatCurrency(resumoCorrigido.taxaPlataforma)}</p>
               </CardContent>
             </Card>
             <Card>
@@ -277,7 +292,7 @@ export default function Sales() {
                 <BadgeDollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">{formatCurrency(salesReport.resumo.totalLiquido)}</div>
+                <div className="text-2xl font-bold text-emerald-600">{formatCurrency(resumoCorrigido.totalLiquido)}</div>
               </CardContent>
             </Card>
           </div>
@@ -345,7 +360,7 @@ export default function Sales() {
                   ) : (
                     filteredSales.map((sale) => (
                       <TableRow
-                        key={sale.paymentId}
+                        key={sale.paymentId ?? `senha-${sale.senha}`}
                         className="cursor-pointer hover:bg-muted/60 transition-colors"
                         onClick={() => setSelectedSale(sale)}
                       >
@@ -355,7 +370,7 @@ export default function Sales() {
                           <Badge variant="secondary">{sale.categoria}</Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground capitalize">{sale.dia}</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(sale.valor)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(getValor(sale))}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{getMetodoLabel(sale.metodoPagamento)}</Badge>
                         </TableCell>
@@ -390,7 +405,7 @@ export default function Sales() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <div className="text-sm font-medium text-muted-foreground">Valor</div>
-                    <div className="font-mono text-xl font-semibold">{formatCurrency(selectedSale.valor)}</div>
+                    <div className="font-mono text-xl font-semibold">{formatCurrency(getValor(selectedSale))}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm font-medium text-muted-foreground">Horário</div>

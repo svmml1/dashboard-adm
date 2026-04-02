@@ -5,8 +5,8 @@ export type Evento = {
   nome: string
   status: string
   local: string
-  startDate: string
-  endDate: string
+  startDate: { _seconds: number; _nanoseconds: number } | string
+  endDate: { _seconds: number; _nanoseconds: number } | string
   valorSenha: number
 }
 
@@ -19,7 +19,7 @@ export type VendaDia = {
   cavaloEsteira: string
   nomeEsteira: string
   userId: string
-  paymentId: string
+  paymentId: string | null
   metodoPagamento: string
   statusPagamento: 'PAGO' | 'CONFIRMADA' | 'AGUARDANDO' | 'EXPIRADO'
   valor: number

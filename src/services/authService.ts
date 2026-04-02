@@ -1,7 +1,6 @@
 import api from './api'
 export interface AuthUser {
-  userId?: string
-  id?: string
+  id: string
   name: string
   email: string
   role: string
@@ -26,7 +25,7 @@ export interface LoginCredentials {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>('/modules/auth/login', {
+    const response = await api.post<LoginResponse>('/auth/login', {
       identifier: credentials.email,
       password: credentials.password,
     })
