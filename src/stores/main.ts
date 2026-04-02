@@ -3,21 +3,13 @@ import axios from 'axios'
 import type { AuthUser } from '@/services/authService'
 import { authService } from '@/services/authService'
 import { walletService, type WalletSummary, type SaqueRequest, type SolicitarSaqueParams } from '@/services/walletService'
+import { salesService, type Evento, type RelatorioVendas } from '@/services/salesService'
 
-export type SaleStatus = 'Pago' | 'Pendente' | 'Cancelado'
-export type Sale = {
-  id: string
-  competitor: string
-  cpf: string
-  category: string
-  value: number
-  status: SaleStatus
-  date: string
-}
+export type { VendaDia as Sale } from '@/services/salesService'
 
 type MainStore = {
   user: AuthUser | null
-  login: (user: AuthUser, token: string, refreshToken: string) => void
+  login: (user: AuthUser, token: string, refreshToken?: string) => void
   logout: () => void
   // wallet
   walletSummary: WalletSummary | null
@@ -25,75 +17,15 @@ type MainStore = {
   withdrawals: SaqueRequest[]
   requestWithdrawal: (params: SolicitarSaqueParams) => Promise<void>
   refreshWallet: () => Promise<void>
-  // sales (mock until sales API is integrated)
-  sales: Sale[]
+  // sales
+  eventos: Evento[]
+  eventosLoading: boolean
+  salesReport: RelatorioVendas | null
+  salesLoading: boolean
+  selectedEventId: string | null
+  loadEventos: () => Promise<void>
+  loadSales: (eventId: string) => Promise<void>
 }
-
-const MOCK_SALES: Sale[] = [
-  {
-    id: 'V-1001',
-    competitor: 'Carlos Silva',
-    cpf: '111.222.333-44',
-    category: 'Profissional',
-    value: 200.0,
-    status: 'Pago',
-    date: '2023-10-01T10:00:00Z',
-  },
-  {
-    id: 'V-1002',
-    competitor: 'Mariana Costa',
-    cpf: '222.333.444-55',
-    category: 'Amador',
-    value: 100.0,
-    status: 'Pago',
-    date: '2023-10-02T11:30:00Z',
-  },
-  {
-    id: 'V-1003',
-    competitor: 'João Pedro',
-    cpf: '333.444.555-66',
-    category: 'Aspirante',
-    value: 80.0,
-    status: 'Pendente',
-    date: '2023-10-03T09:15:00Z',
-  },
-  {
-    id: 'V-1004',
-    competitor: 'Ana Paula',
-    cpf: '444.555.666-77',
-    category: 'Amador',
-    value: 100.0,
-    status: 'Cancelado',
-    date: '2023-10-03T14:20:00Z',
-  },
-  {
-    id: 'V-1005',
-    competitor: 'Roberto Alves',
-    cpf: '555.666.777-88',
-    category: 'Profissional',
-    value: 200.0,
-    status: 'Pago',
-    date: '2023-10-04T16:45:00Z',
-  },
-  {
-    id: 'V-1006',
-    competitor: 'Juliana Mendes',
-    cpf: '666.777.888-99',
-    category: 'Aspirante',
-    value: 80.0,
-    status: 'Pago',
-    date: '2023-10-05T08:10:00Z',
-  },
-  {
-    id: 'V-1007',
-    competitor: 'Lucas Fernandes',
-    cpf: '777.888.999-00',
-    category: 'Amador',
-    value: 100.0,
-    status: 'Pago',
-    date: '2023-10-05T14:20:00Z',
-  },
-]
 
 export const MainContext = createContext<MainStore | null>(null)
 
@@ -114,7 +46,11 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null)
   const [walletLoading, setWalletLoading] = useState(false)
   const [withdrawals, setWithdrawals] = useState<SaqueRequest[]>([])
-  const [sales] = useState<Sale[]>(MOCK_SALES)
+  const [eventos, setEventos] = useState<Evento[]>([])
+  const [eventosLoading, setEventosLoading] = useState(false)
+  const [salesReport, setSalesReport] = useState<RelatorioVendas | null>(null)
+  const [salesLoading, setSalesLoading] = useState(false)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
 
   const refreshWallet = useCallback(async () => {
     setWalletLoading(true)
@@ -126,27 +62,63 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
       setWalletSummary(summary)
       setWithdrawals(saques)
     } catch (err) {
-      // If token is invalid/expired, log out cleanly
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         authService.logout()
         setUser(null)
         setWalletSummary(null)
         setWithdrawals([])
       }
-      // other errors: keep user logged in, wallet shows zeros
     } finally {
       setWalletLoading(false)
     }
   }, [])
 
-  // load wallet whenever a user session is active
-  useEffect(() => {
-    if (user) refreshWallet()
-  }, [user, refreshWallet])
+  const loadEventos = useCallback(async () => {
+    setEventosLoading(true)
+    try {
+      const data = await salesService.getEventos()
+      setEventos(data)
+      // auto-select first event and load its sales
+      if (data.length > 0) {
+        setSelectedEventId(data[0].id)
+      }
+    } catch {
+      // silently fail — user stays logged in
+    } finally {
+      setEventosLoading(false)
+    }
+  }, [])
 
-  const login = (userData: AuthUser, token: string, refreshToken: string) => {
+  const loadSales = useCallback(async (eventId: string) => {
+    setSalesLoading(true)
+    setSelectedEventId(eventId)
+    try {
+      const data = await salesService.getVendas(eventId)
+      setSalesReport(data)
+    } catch {
+      setSalesReport(null)
+    } finally {
+      setSalesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user) {
+      refreshWallet()
+      loadEventos()
+    }
+  }, [user, refreshWallet, loadEventos])
+
+  // auto-load sales when first event is set
+  useEffect(() => {
+    if (selectedEventId && salesReport === null) {
+      loadSales(selectedEventId)
+    }
+  }, [selectedEventId, salesReport, loadSales])
+
+  const login = (userData: AuthUser, token: string, refreshToken?: string) => {
     localStorage.setItem('token', token)
-    localStorage.setItem('refreshToken', refreshToken)
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
     localStorage.setItem('user', JSON.stringify(userData))
     setUser(userData)
   }
@@ -156,6 +128,9 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setWalletSummary(null)
     setWithdrawals([])
+    setEventos([])
+    setSalesReport(null)
+    setSelectedEventId(null)
   }
 
   const requestWithdrawal = async (params: SolicitarSaqueParams) => {
@@ -166,7 +141,11 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
   return React.createElement(
     MainContext.Provider,
     {
-      value: { user, login, logout, walletSummary, walletLoading, withdrawals, requestWithdrawal, refreshWallet, sales },
+      value: {
+        user, login, logout,
+        walletSummary, walletLoading, withdrawals, requestWithdrawal, refreshWallet,
+        eventos, eventosLoading, salesReport, salesLoading, selectedEventId, loadEventos, loadSales,
+      },
     },
     children,
   )
