@@ -12,23 +12,34 @@ export function BottomNav() {
   const location = useLocation()
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-md md:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    <nav
+      className="fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-md md:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)', borderTop: '1px solid hsl(var(--border))' }}
     >
-      <div className="flex">
+      <div className="flex h-16">
         {tabs.map(({ to, icon: Icon, label }) => {
           const active = location.pathname === to
           return (
             <Link
               key={to}
               to={to}
-              className={cn(
-                'flex flex-1 flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition-colors',
-                active ? 'text-primary' : 'text-muted-foreground',
-              )}
+              className="flex flex-1 flex-col items-center justify-center gap-1 transition-colors"
             >
-              <Icon className={cn('h-5 w-5', active && 'stroke-[2.5px]')} />
-              <span>{label}</span>
+              <div className={cn(
+                'flex items-center justify-center rounded-xl w-12 h-7 transition-all',
+                active ? 'bg-primary/15' : ''
+              )}>
+                <Icon className={cn(
+                  'h-5 w-5 transition-all',
+                  active ? 'text-primary stroke-[2.5px]' : 'text-muted-foreground'
+                )} />
+              </div>
+              <span className={cn(
+                'text-[10px] font-medium',
+                active ? 'text-primary' : 'text-muted-foreground'
+              )}>
+                {label}
+              </span>
             </Link>
           )
         })}

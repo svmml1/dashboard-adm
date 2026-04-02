@@ -102,13 +102,13 @@ export default function Sales() {
 
   return (
     <PageLoader>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Vendas de Senhas</h2>
-            <p className="text-muted-foreground">Acompanhe todas as senhas vendidas.</p>
+      <div className="space-y-4">
+        <div className="flex flex-row justify-between items-center gap-4">
+          <div className="hidden md:block">
+            <h2 className="text-2xl font-bold tracking-tight">Vendas de Senhas</h2>
+            <p className="text-muted-foreground text-sm">Acompanhe todas as senhas vendidas.</p>
           </div>
-          <Button onClick={handleExport} variant="outline" className="shrink-0 shadow-sm" disabled={!filteredSales.length}>
+          <Button onClick={handleExport} variant="outline" className="shrink-0 shadow-sm md:flex" disabled={!filteredSales.length}>
             <Download className="mr-2 h-4 w-4" /> Exportar CSV
           </Button>
         </div>

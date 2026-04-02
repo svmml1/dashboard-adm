@@ -116,12 +116,10 @@ export default function Withdrawals() {
 
   return (
     <PageLoader>
-      <div className="space-y-6 max-w-5xl mx-auto">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-bold tracking-tight">Financeiro</h2>
-          <p className="text-muted-foreground">
-            Gerencie seus recebíveis e solicite saques via PIX.
-          </p>
+      <div className="space-y-4 max-w-5xl mx-auto">
+        <div className="hidden md:flex flex-col gap-1">
+          <h2 className="text-2xl font-bold tracking-tight">Financeiro</h2>
+          <p className="text-muted-foreground text-sm">Gerencie seus recebíveis e solicite saques via PIX.</p>
         </div>
 
         {/* Balance cards */}
