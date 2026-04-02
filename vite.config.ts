@@ -1,0 +1,79 @@
+/* Vite config for building the frontend react app: https://vite.dev/config/ */
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+import { VitePWA } from 'vite-plugin-pwa'
+// @ts-expect-error - uidPlugin is a custom plugin
+import uidPlugin from './vite-plugin-react-uid'
+
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => ({
+  server: {
+    host: '::',
+    port: 8080,
+  },
+  build: {
+    outDir: mode === 'development' ? 'dev-dist' : 'dist',
+    minify: mode !== 'development',
+    sourcemap: mode === 'development',
+    rolldownOptions: {
+      onwarn(warning, warn) {
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+          return
+        }
+        warn(warning)
+      },
+    },
+  },
+  plugins: [
+    mode === 'development' ? uidPlugin() : undefined,
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'skip.png'],
+      manifest: {
+        name: 'Dashboard ADM',
+        short_name: 'Dashboard',
+        description: 'Painel administrativo',
+        theme_color: '#09090b',
+        background_color: '#09090b',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        icons: [
+          {
+            src: '/skip.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/skip.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: '/skip.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ],
+      },
+    }),
+  ].filter(Boolean),
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(mode ?? process.env.NODE_ENV ?? 'production'),
+  },
+  resolve: {
+    alias: [
+      {
+        find: '@',
+        replacement: path.resolve(__dirname, './src'),
+      },
+      {
+        find: /zod\/v4\/core/,
+        replacement: path.resolve(__dirname, 'node_modules', 'zod', 'v4', 'core'),
+      }
+    ],
+  },
+}))
