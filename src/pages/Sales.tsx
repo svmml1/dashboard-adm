@@ -3,6 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Table,
   TableBody,
   TableCell,
@@ -27,7 +33,7 @@ import {
 } from '@/components/ui/select'
 import useMainStore from '@/stores/main'
 import type { VendaDia } from '@/services/salesService'
-import { Download, Search, Ticket, Loader2, TrendingUp, CheckCircle, Clock, BadgeDollarSign } from 'lucide-react'
+import { Download, Search, Ticket, Loader2, TrendingUp, CheckCircle, Clock, BadgeDollarSign, FileSpreadsheet, FileText, ChevronDown } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { PageLoader } from '@/components/PageLoader'
@@ -83,21 +89,103 @@ export default function Sales() {
     })
   }, [vendas, search, statusFilter])
 
-  const handleExport = () => {
+  const handleExportCSV = () => {
     if (!filteredSales.length) return
     const header = 'Senha,Vaqueiro,Categoria,Dia,Valor,Status,Método'
     const rows = filteredSales.map((s) =>
-      `${s.senha},"${s.vaqueiro}","${s.categoria}","${s.dia}",${s.valor},${s.statusPagamento},${s.metodoPagamento}`
+      `${s.senha},"${s.vaqueiro}","${s.categoria}","${s.dia}",${s.valor},${getStatusLabel(s.statusPagamento)},${getMetodoLabel(s.metodoPagamento)}`
     )
     const csv = [header, ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `vendas-${selectedEventId}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast({ title: 'CSV exportado com sucesso!' })
+    toast({ title: 'CSV exportado!' })
+  }
+
+  const handleExportExcel = async () => {
+    if (!filteredSales.length) return
+    const { utils, writeFile } = await import('xlsx')
+    const rows = filteredSales.map((s) => ({
+      Senha: s.senha,
+      Vaqueiro: s.vaqueiro,
+      Categoria: s.categoria,
+      Dia: s.dia,
+      'Cavalo Puxa': s.cavaloPuxa,
+      'Cavalo Esteira': s.cavaloEsteira,
+      Haras: s.nomeEsteira,
+      Valor: s.valor,
+      Método: getMetodoLabel(s.metodoPagamento),
+      Status: getStatusLabel(s.statusPagamento),
+      Horário: s.horario ? new Date(s.horario).toLocaleString('pt-BR') : '',
+    }))
+    const ws = utils.json_to_sheet(rows)
+    ws['!cols'] = [8,25,15,12,20,20,20,12,10,12,20].map(w => ({ wch: w }))
+    const wb = utils.book_new()
+    utils.book_append_sheet(wb, ws, 'Vendas')
+
+    if (salesReport) {
+      const resumoRows = [
+        { Item: 'Total de Vendas', Valor: salesReport.resumo.totalVendas },
+        { Item: 'Pagas', Valor: salesReport.resumo.totalPagas },
+        { Item: 'Aguardando', Valor: salesReport.resumo.totalAguardando },
+        { Item: 'Arrecadado Bruto', Valor: salesReport.resumo.totalArrecadadoBruto },
+        { Item: 'Taxa Plataforma', Valor: salesReport.resumo.taxaPlataforma },
+        { Item: 'Líquido', Valor: salesReport.resumo.totalLiquido },
+      ]
+      const wsResumo = utils.json_to_sheet(resumoRows)
+      utils.book_append_sheet(wb, wsResumo, 'Resumo')
+    }
+
+    writeFile(wb, `vendas-${selectedEventId}.xlsx`)
+    toast({ title: 'Excel exportado!' })
+  }
+
+  const handleExportPDF = async () => {
+    if (!filteredSales.length) return
+    const { default: jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF({ orientation: 'landscape' })
+    const eventoNome = salesReport?.evento?.nome ?? selectedEventId ?? 'Vendas'
+
+    doc.setFontSize(16)
+    doc.text(eventoNome, 14, 16)
+    doc.setFontSize(10)
+    doc.setTextColor(120)
+    doc.text(`Exportado em ${new Date().toLocaleDateString('pt-BR')}`, 14, 22)
+
+    if (salesReport) {
+      const r = salesReport.resumo
+      doc.setTextColor(0)
+      doc.setFontSize(9)
+      doc.text(`Total: ${r.totalVendas}  |  Pagas: ${r.totalPagas}  |  Aguardando: ${r.totalAguardando}  |  Bruto: ${formatCurrency(r.totalArrecadadoBruto)}  |  Taxa: ${formatCurrency(r.taxaPlataforma)}  |  Líquido: ${formatCurrency(r.totalLiquido)}`, 14, 28)
+    }
+
+    autoTable(doc, {
+      startY: 32,
+      head: [['#', 'Senha', 'Vaqueiro', 'Categoria', 'Dia', 'Cavalo Puxa', 'Cavalo Esteira', 'Valor', 'Método', 'Status']],
+      body: filteredSales.map((s, i) => [
+        i + 1,
+        s.senha,
+        s.vaqueiro,
+        s.categoria,
+        s.dia,
+        s.cavaloPuxa,
+        s.cavaloEsteira,
+        formatCurrency(s.valor),
+        getMetodoLabel(s.metodoPagamento),
+        getStatusLabel(s.statusPagamento),
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [212, 168, 71] },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    })
+
+    doc.save(`vendas-${selectedEventId}.pdf`)
+    toast({ title: 'PDF exportado!' })
   }
 
   return (
@@ -108,9 +196,24 @@ export default function Sales() {
             <h2 className="text-2xl font-bold tracking-tight">Vendas de Senhas</h2>
             <p className="text-muted-foreground text-sm">Acompanhe todas as senhas vendidas.</p>
           </div>
-          <Button onClick={handleExport} variant="outline" className="shrink-0 shadow-sm md:flex" disabled={!filteredSales.length}>
-            <Download className="mr-2 h-4 w-4" /> Exportar CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="shrink-0 shadow-sm" disabled={!filteredSales.length}>
+                <Download className="mr-2 h-4 w-4" /> Exportar <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" /> CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" /> Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <FileText className="mr-2 h-4 w-4 text-red-500" /> PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Event selector */}
