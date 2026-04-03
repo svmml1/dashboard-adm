@@ -132,8 +132,8 @@ export default function Index() {
               <div className="space-y-4 mt-4">
                 {recentSales.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">Nenhuma venda ainda.</p>
-                ) : recentSales.map((sale) => (
-                  <div key={sale.paymentId ?? `senha-${sale.senha}`} className="flex items-center justify-between">
+                ) : recentSales.map((sale, i) => (
+                  <div key={`${sale.paymentId ?? sale.senha}-${i}`} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                         <span className="text-xs font-bold text-foreground">

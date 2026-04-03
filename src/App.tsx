@@ -11,6 +11,8 @@ import Sales from './pages/Sales'
 import Withdrawals from './pages/Withdrawals'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
+import AdminEventos from './pages/admin/AdminEventos'
+import AdminSaques from './pages/admin/AdminSaques'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -21,10 +23,15 @@ const App = () => (
         <InstallPrompt />
         <Routes>
           <Route element={<Layout />}>
+            {/* Organizador routes */}
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/vendas" element={<Sales />} />
             <Route path="/saques" element={<Withdrawals />} />
+            {/* Admin routes */}
+            <Route path="/admin/eventos" element={<AdminEventos />} />
+            <Route path="/admin/vendas" element={<Sales />} />
+            <Route path="/admin/saques" element={<AdminSaques />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

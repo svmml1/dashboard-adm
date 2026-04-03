@@ -1,15 +1,25 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Ticket, Wallet } from 'lucide-react'
+import { Home, Ticket, Wallet, CalendarDays, CreditCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import useMainStore from '@/stores/main'
 
-const tabs = [
+const ORGANIZER_TABS = [
   { to: '/', icon: Home, label: 'Início' },
   { to: '/vendas', icon: Ticket, label: 'Vendas' },
   { to: '/saques', icon: Wallet, label: 'Saques' },
 ]
 
+const ADMIN_TABS = [
+  { to: '/admin/eventos', icon: CalendarDays, label: 'Eventos' },
+  { to: '/admin/vendas', icon: Ticket, label: 'Vendas' },
+  { to: '/admin/saques', icon: CreditCard, label: 'Saques' },
+]
+
 export function BottomNav() {
   const location = useLocation()
+  const { user } = useMainStore()
+  const isAdmin = user?.role === 'admin'
+  const tabs = isAdmin ? ADMIN_TABS : ORGANIZER_TABS
 
   return (
     <nav

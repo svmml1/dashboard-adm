@@ -10,18 +10,22 @@ const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
   '/vendas': 'Vendas',
   '/saques': 'Saques',
+  '/admin/eventos': 'Eventos',
+  '/admin/vendas': 'Vendas',
+  '/admin/saques': 'Saques',
 }
 
 export default function Layout() {
   const { user } = useMainStore()
   const location = useLocation()
+  const isAdmin = user?.role === 'admin'
 
   if (!user && location.pathname !== '/login') {
     return <Navigate to="/login" replace />
   }
 
   if (user && location.pathname === '/login') {
-    return <Navigate to="/" replace />
+    return <Navigate to={isAdmin ? '/admin/eventos' : '/'} replace />
   }
 
   if (!user) {
@@ -30,6 +34,11 @@ export default function Layout() {
         <Outlet />
       </main>
     )
+  }
+
+  // Redirect admin away from organizer-only routes
+  if (isAdmin && ['/', '/vendas', '/saques'].includes(location.pathname)) {
+    return <Navigate to="/admin/eventos" replace />
   }
 
   const pageTitle = PAGE_TITLES[location.pathname] ?? 'Dashboard ADM'

@@ -7,14 +7,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Home, Ticket, Wallet, LogOut } from 'lucide-react'
+import { Home, Ticket, Wallet, LogOut, CalendarDays, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import useMainStore from '@/stores/main'
 
 export function AppSidebar() {
   const location = useLocation()
-  const { logout } = useMainStore()
+  const { logout, user } = useMainStore()
+  const isAdmin = user?.role === 'admin'
 
   return (
     <Sidebar>
@@ -26,30 +28,63 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={location.pathname === '/'}>
-              <Link to="/">
-                <Home /> <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={location.pathname === '/vendas'}>
-              <Link to="/vendas">
-                <Ticket /> <span>Vendas</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={location.pathname === '/saques'}>
-              <Link to="/saques">
-                <Wallet /> <span>Solicitar Saque</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {isAdmin ? (
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/admin/eventos'}>
+                  <Link to="/admin/eventos">
+                    <CalendarDays /> <span>Eventos</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/admin/vendas'}>
+                  <Link to="/admin/vendas">
+                    <Ticket /> <span>Vendas</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/admin/saques'}>
+                  <Link to="/admin/saques">
+                    <CreditCard /> <span>Saques</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          ) : (
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/'}>
+                  <Link to="/">
+                    <Home /> <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/vendas'}>
+                  <Link to="/vendas">
+                    <Ticket /> <span>Vendas</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/saques'}>
+                  <Link to="/saques">
+                    <Wallet /> <span>Solicitar Saque</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t">
+        {isAdmin && (
+          <p className="text-xs text-muted-foreground mb-2 px-1">
+            Logado como <span className="font-semibold text-primary">Admin</span>
+          </p>
+        )}
         <Button
           variant="ghost"
           className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
