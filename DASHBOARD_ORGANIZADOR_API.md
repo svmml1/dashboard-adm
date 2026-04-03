@@ -327,27 +327,252 @@ Authorization: Bearer {token}
 
 ---
 
-## Rotas Admin
+## Rotas Admin (role: `admin`)
+
+Todas exigem token de usuário com `role: "admin"`.
+
+---
+
+### A1. Dashboard Geral
+
+Agrega todas as vendas de todos os eventos e parques.
 
 ```http
-# Vincular evento antigo ao organizador
-PATCH /api/wallet/admin/evento/{eventId}/organizador
-Body: { "organizerId": "userId_do_parque" }
+GET /api/wallet/admin/dashboard
+Authorization: Bearer {token_admin}
+```
 
-# Saques pendentes para processar
-GET /api/wallet/admin/saques-pendentes
-
-# Atualizar status de saque
-PATCH /api/wallet/admin/saque/{saqueId}
-Body: { "status": "PAGO", "observacao": "PIX enviado" }
-
-# Ver todas as wallets
-GET /api/wallet/admin/wallets
+**Resposta:**
+```json
+{
+  "success": true,
+  "resumo": {
+    "totalEventosComVendas": 3,
+    "totalTransacoes": 12,
+    "totalArrecadadoBruto": 10800.00,
+    "totalTaxaPlataforma": 324.00,
+    "totalLiquidoParques": 10476.00,
+    "totalSaldoEmWallets": 9876.00,
+    "totalSaquesPendentes": 1,
+    "totalValorSaquesPendentes": 500.00
+  },
+  "porEvento": [
+    {
+      "eventId": "8PSxxFQJZboSjV7FlZRJ",
+      "nome": "5ª Vaquejada Genesio Araujo",
+      "organizerId": "PZAznWeQMM7ZRdhLCl8Q",
+      "totalTransacoes": 6,
+      "totalBruto": 5400.00,
+      "taxa": 162.00,
+      "totalLiquido": 5238.00,
+      "resumoPorDia": {
+        "quarta-feira": 1746.00,
+        "quinta-feira": 1746.00,
+        "sexta-feira": 873.00,
+        "sabado": 873.00
+      }
+    }
+  ],
+  "porParque": [
+    {
+      "organizerId": "PZAznWeQMM7ZRdhLCl8Q",
+      "totalTransacoes": 6,
+      "totalBruto": 5400.00,
+      "taxa": 162.00,
+      "totalLiquido": 5238.00,
+      "saldoDisponivel": 4738.00,
+      "totalSacado": 500.00,
+      "saquesPendentes": 1,
+      "valorSaquePendente": 500.00
+    }
+  ]
+}
 ```
 
 ---
 
-## Fluxo do Front (passo a passo)
+### A2. Vendas de um evento específico (admin)
+
+Igual ao endpoint do parque mas sem verificação de dono. Inclui `boiNaTV`, `abvaq` por senha e o saldo atual da wallet do parque.
+
+```http
+GET /api/wallet/admin/vendas/{eventId}
+Authorization: Bearer {token_admin}
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "evento": {
+    "id": "8PSxxFQJZboSjV7FlZRJ",
+    "nome": "5ª Vaquejada Genesio Araujo",
+    "status": "active",
+    "local": "Parque do João",
+    "startDate": { "_seconds": 1754352000, "_nanoseconds": 0 },
+    "endDate":   { "_seconds": 1754697600, "_nanoseconds": 0 },
+    "valorSenha": 900,
+    "organizerId": "PZAznWeQMM7ZRdhLCl8Q"
+  },
+  "resumo": {
+    "totalVendas": 8,
+    "totalPagas": 6,
+    "totalAguardando": 2,
+    "totalArrecadadoBruto": 5400.00,
+    "taxaPlataforma": 162.00,
+    "totalLiquidoParques": 5238.00,
+    "resumoPorDia": {
+      "quarta-feira": { "pagas": 2, "aguardando": 1, "arrecadado": 1800.00 }
+    },
+    "resumoPorMetodo": {
+      "PIX_EFI": 3600.00,
+      "Direto": 0
+    },
+    "walletParque": {
+      "saldoDisponivel": 4738.00,
+      "totalRecebido": 5238.00,
+      "totalSacado": 500.00
+    }
+  },
+  "vendas": [
+    {
+      "dia": "quarta-feira",
+      "senha": 25,
+      "vaqueiro": "João Silva",
+      "categoria": "Profissional",
+      "userId": "lDBqQYavevsxwFOCmR6M",
+      "paymentId": "VAQ17750...",
+      "metodoPagamento": "PIX_EFI",
+      "statusPagamento": "PAGO",
+      "valor": 900,
+      "boiNaTV": false,
+      "abvaq": true,
+      "horario": "2026-04-02T18:19:32.000Z",
+      "pagamentoConfirmadoEm": "2026-04-02T18:19:55.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### A3. Todas as wallets dos parques
+
+```http
+GET /api/wallet/admin/wallets
+Authorization: Bearer {token_admin}
+```
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "PZAznWeQMM7ZRdhLCl8Q",
+      "eventOwnerId": "PZAznWeQMM7ZRdhLCl8Q",
+      "saldoDisponivel": 4738.00,
+      "saldoPendente": 0,
+      "totalRecebido": 5238.00,
+      "totalSacado": 500.00
+    }
+  ]
+}
+```
+
+---
+
+### A4. Saques pendentes
+
+```http
+GET /api/wallet/admin/saques-pendentes
+Authorization: Bearer {token_admin}
+```
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "saqueXyz123",
+      "eventOwnerId": "PZAznWeQMM7ZRdhLCl8Q",
+      "valor": 500.00,
+      "chavePix": "email@parque.com",
+      "tipoChave": "EMAIL",
+      "nomeTitular": "João Parque LTDA",
+      "status": "SOLICITADO",
+      "createdAt": "2026-04-02T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### A5. Atualizar status de saque
+
+```http
+PATCH /api/wallet/admin/saque/{saqueId}
+Authorization: Bearer {token_admin}
+Content-Type: application/json
+
+{
+  "status": "PAGO",
+  "observacao": "PIX enviado às 14h"
+}
+```
+
+> Status possíveis: `PROCESSANDO` → `PAGO` | `FALHOU` | `CANCELADO`
+> Se `FALHOU` ou `CANCELADO`, o saldo é automaticamente devolvido ao parque.
+
+---
+
+### A6. Vincular evento antigo ao parque
+
+Para eventos criados antes do campo `organizerId` existir.
+
+```http
+PATCH /api/wallet/admin/evento/{eventId}/organizador
+Authorization: Bearer {token_admin}
+Content-Type: application/json
+
+{ "organizerId": "PZAznWeQMM7ZRdhLCl8Q" }
+```
+
+---
+
+### A7. Recalcular transações (corrige valores errados)
+
+Recalcula `valorBruto` e `valorLiquido` de todas as `walletTransactions` de um parque usando `valorSenha × numSenhas` (fonte verdadeira) e já atualiza o saldo.
+
+```http
+POST /api/wallet/admin/recalcular-transacoes/{eventOwnerId}
+Authorization: Bearer {token_admin}
+```
+
+```json
+{ "success": true, "transacoesCorrigidas": 3, "saldoRecalculado": 5238.00 }
+```
+
+---
+
+### A8. Deletar transações de um evento
+
+Remove `walletTransactions` de um evento específico e recalcula o saldo do parque.
+
+```http
+DELETE /api/wallet/admin/transacoes/{eventId}
+Authorization: Bearer {token_admin}
+```
+
+> Query opcional: `?apenasZero=true` — deleta só transações com `valorBruto=0`
+
+```json
+{ "success": true, "deletadas": 1, "saldoAtualizado": 0 }
+```
+
+---
+
+## Fluxo do Front — Parque (passo a passo)
 
 ```
 1. POST /api/auth/login → guarda token + user.id
@@ -370,6 +595,37 @@ GET /api/wallet/admin/wallets
 
 6. GET /api/wallet/saques
    → exibe histórico de saques com status atual
+```
+
+---
+
+## Fluxo do Front — Admin (passo a passo)
+
+```
+1. POST /api/auth/login (usuário com role: "admin")
+
+2. GET /api/wallet/admin/dashboard
+   → exibe cards: totalArrecadadoBruto, totalTaxaPlataforma,
+     totalLiquidoParques, totalSaldoEmWallets, saquesPendentes
+   → tabela porEvento: vendas por evento
+   → tabela porParque: saldo atual de cada parque
+
+3. Admin clica em um evento
+   → GET /api/wallet/admin/vendas/{eventId}
+   → mesma tabela do parque + campos boiNaTV, abvaq
+   → card "walletParque": saldo disponível, total recebido, total sacado
+
+4. GET /api/wallet/admin/saques-pendentes
+   → lista saques aguardando processamento
+
+5. Admin aprova/rejeita saque
+   → PATCH /api/wallet/admin/saque/{saqueId}
+   → Body: { "status": "PAGO" | "FALHOU" | "CANCELADO" }
+   → FALHOU/CANCELADO devolve saldo automaticamente ao parque
+
+6. (Manutenção) Vincular evento antigo a parque
+   → PATCH /api/wallet/admin/evento/{eventId}/organizador
+   → Body: { "organizerId": "userId_do_parque" }
 ```
 
 ---

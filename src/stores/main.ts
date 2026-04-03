@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import axios from 'axios'
 import type { AuthUser } from '@/services/authService'
 import { authService } from '@/services/authService'
 import { walletService, type WalletSummary, type SaqueRequest, type SolicitarSaqueParams } from '@/services/walletService'
 import { salesService, type Evento, type RelatorioVendas } from '@/services/salesService'
+import { adminService } from '@/services/adminService'
 
 export type { VendaDia as Sale } from '@/services/salesService'
 
@@ -43,6 +44,8 @@ function loadUserFromStorage(): AuthUser | null {
 
 export function MainProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(loadUserFromStorage)
+  const userRef = useRef(user)
+  useEffect(() => { userRef.current = user }, [user])
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null)
   const [walletLoading, setWalletLoading] = useState(false)
   const [withdrawals, setWithdrawals] = useState<SaqueRequest[]>([])
@@ -96,7 +99,14 @@ export function MainProvider({ children }: { children: React.ReactNode }) {
     setSalesLoading(true)
     setSelectedEventId(eventId)
     try {
-      const data = await salesService.getVendas(eventId)
+      const isAdmin = userRef.current?.role === 'admin'
+      const data = isAdmin
+        ? await adminService.getAdminVendas(eventId)
+        : await salesService.getVendas(eventId)
+      // normalize: admin uses totalLiquidoParques, organizer uses totalLiquido
+      if (data.resumo && data.resumo.totalLiquidoParques != null && data.resumo.totalLiquido == null) {
+        data.resumo.totalLiquido = data.resumo.totalLiquidoParques
+      }
       setSalesReport(data)
     } catch (err) {
       setSalesReport(null)

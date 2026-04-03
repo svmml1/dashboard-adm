@@ -1,8 +1,9 @@
 import api from './api'
-import type { Evento } from './salesService'
+import type { Evento, RelatorioVendas } from './salesService'
 import type { PixTipoChave } from './walletService'
 
 export interface AdminWallet {
+  id?: string
   eventOwnerId: string
   saldoDisponivel: number
   saldoPendente: number
@@ -22,12 +23,60 @@ export interface SaquePendente {
   createdAt?: string | { _seconds: number; _nanoseconds: number }
 }
 
+export interface AdminDashboardEvento {
+  eventId: string
+  nome: string
+  organizerId: string
+  totalTransacoes: number
+  totalBruto: number
+  taxa: number
+  totalLiquido: number
+  resumoPorDia: Record<string, number>
+}
+
+export interface AdminDashboardParque {
+  organizerId: string
+  totalTransacoes: number
+  totalBruto: number
+  taxa: number
+  totalLiquido: number
+  saldoDisponivel: number
+  totalSacado: number
+  saquesPendentes: number
+  valorSaquePendente: number
+}
+
+export interface AdminDashboard {
+  resumo: {
+    totalEventosComVendas: number
+    totalTransacoes: number
+    totalArrecadadoBruto: number
+    totalTaxaPlataforma: number
+    totalLiquidoParques: number
+    totalSaldoEmWallets: number
+    totalSaquesPendentes: number
+    totalValorSaquesPendentes: number
+  }
+  porEvento: AdminDashboardEvento[]
+  porParque: AdminDashboardParque[]
+}
+
 export const adminService = {
+  getDashboard: async (): Promise<AdminDashboard> => {
+    const res = await api.get<{ success: boolean } & AdminDashboard>('/wallet/admin/dashboard')
+    return { resumo: res.data.resumo, porEvento: res.data.porEvento, porParque: res.data.porParque }
+  },
+
   getAllEventos: async (): Promise<Evento[]> => {
     const response = await api.get<{ success: boolean; total: number; data: Evento[] }>(
       '/wallet/meus-eventos',
     )
     return response.data.data
+  },
+
+  getAdminVendas: async (eventId: string): Promise<RelatorioVendas> => {
+    const response = await api.get<RelatorioVendas>(`/wallet/admin/vendas/${eventId}`)
+    return response.data
   },
 
   getAllWallets: async (): Promise<AdminWallet[]> => {
@@ -56,3 +105,4 @@ export const adminService = {
     await api.patch(`/wallet/admin/evento/${eventId}/organizador`, { organizerId })
   },
 }
+

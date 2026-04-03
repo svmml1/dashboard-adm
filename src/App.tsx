@@ -13,6 +13,7 @@ import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import AdminEventos from './pages/admin/AdminEventos'
 import AdminSaques from './pages/admin/AdminSaques'
+import AdminDashboardPage from './pages/admin/AdminDashboard'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/vendas" element={<Sales />} />
             <Route path="/saques" element={<Withdrawals />} />
             {/* Admin routes */}
+            <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/eventos" element={<AdminEventos />} />
             <Route path="/admin/vendas" element={<Sales />} />
             <Route path="/admin/saques" element={<AdminSaques />} />

@@ -25,6 +25,8 @@ export type VendaDia = {
   valor: number
   horario: string
   pagamentoConfirmadoEm: string | null
+  boiNaTV?: boolean
+  abvaq?: boolean
 }
 
 export type ResumoVendas = {
@@ -34,6 +36,12 @@ export type ResumoVendas = {
   totalArrecadadoBruto: number
   taxaPlataforma: number
   totalLiquido: number
+  totalLiquidoParques?: number
+  walletParque?: {
+    saldoDisponivel: number
+    totalRecebido: number
+    totalSacado: number
+  }
   resumoPorDia: Record<string, { pagas: number; aguardando: number; arrecadado: number }>
   resumoPorMetodo: Record<string, number>
 }

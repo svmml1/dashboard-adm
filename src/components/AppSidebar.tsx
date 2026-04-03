@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Home, Ticket, Wallet, LogOut, CalendarDays, CreditCard } from 'lucide-react'
+import { Home, Ticket, Wallet, LogOut, CalendarDays, CreditCard, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import useMainStore from '@/stores/main'
 
@@ -30,6 +30,13 @@ export function AppSidebar() {
         <SidebarMenu>
           {isAdmin ? (
             <>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === '/admin'}>
+                  <Link to="/admin">
+                    <LayoutDashboard /> <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location.pathname === '/admin/eventos'}>
                   <Link to="/admin/eventos">
