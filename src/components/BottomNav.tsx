@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Ticket, Wallet, CalendarDays, CreditCard, LayoutDashboard } from 'lucide-react'
+import { Home, Ticket, Wallet, CalendarDays, CreditCard, LayoutDashboard, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import useMainStore from '@/stores/main'
 
@@ -18,7 +18,7 @@ const ADMIN_TABS = [
 
 export function BottomNav() {
   const location = useLocation()
-  const { user } = useMainStore()
+  const { user, logout } = useMainStore()
   const isAdmin = user?.role === 'admin'
   const tabs = isAdmin ? ADMIN_TABS : ORGANIZER_TABS
 
@@ -54,6 +54,15 @@ export function BottomNav() {
             </Link>
           )
         })}
+        <button
+          onClick={logout}
+          className="flex flex-1 flex-col items-center justify-center gap-1 transition-colors"
+        >
+          <div className="flex items-center justify-center rounded-xl w-12 h-7">
+            <LogOut className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <span className="text-[10px] font-medium text-muted-foreground">Sair</span>
+        </button>
       </div>
     </nav>
   )
