@@ -67,11 +67,9 @@ export const adminService = {
     return { resumo: res.data.resumo, porEvento: res.data.porEvento, porParque: res.data.porParque }
   },
 
-  getAllEventos: async (): Promise<Evento[]> => {
-    const response = await api.get<{ success: boolean; total: number; data: Evento[] }>(
-      '/wallet/meus-eventos',
-    )
-    return response.data.data
+  getAllEventos: async (): Promise<AdminDashboardEvento[]> => {
+    const res = await api.get<{ success: boolean } & AdminDashboard>('/wallet/admin/dashboard')
+    return res.data.porEvento
   },
 
   getAdminVendas: async (eventId: string): Promise<RelatorioVendas> => {

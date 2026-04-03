@@ -1,28 +1,18 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { adminService } from '@/services/adminService'
-import type { Evento } from '@/services/salesService'
+import { adminService, type AdminDashboardEvento } from '@/services/adminService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PageLoader } from '@/components/PageLoader'
-import { Loader2, Search, CalendarDays, MapPin, Ticket } from 'lucide-react'
+import { Loader2, Search, TrendingUp, Users } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 import useMainStore from '@/stores/main'
-
-function formatTimestamp(ts: { _seconds: number; _nanoseconds: number } | string | undefined) {
-  if (!ts) return '—'
-  const date = typeof ts === 'object' && '_seconds' in ts
-    ? new Date(ts._seconds * 1000)
-    : new Date(ts as string)
-  if (isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('pt-BR')
-}
 
 export default function AdminEventos() {
   const navigate = useNavigate()
   const { loadSales } = useMainStore()
-  const [eventos, setEventos] = useState<Evento[]>([])
+  const [eventos, setEventos] = useState<AdminDashboardEvento[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -34,12 +24,11 @@ export default function AdminEventos() {
 
   const filtered = useMemo(() =>
     eventos.filter((e) =>
-      e.nome.toLowerCase().includes(search.toLowerCase()) ||
-      e.local.toLowerCase().includes(search.toLowerCase())
+      e.nome.toLowerCase().includes(search.toLowerCase())
     ), [eventos, search])
 
-  const handleVerVendas = (e: Evento) => {
-    loadSales(e.id)
+  const handleVerVendas = (e: AdminDashboardEvento) => {
+    loadSales(e.eventId)
     navigate('/admin/vendas')
   }
 
@@ -70,29 +59,22 @@ export default function AdminEventos() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((evento) => (
-              <Card key={evento.id} className="flex flex-col hover:-translate-y-1 transition-transform duration-200">
+              <Card key={evento.eventId} className="flex flex-col hover:-translate-y-1 transition-transform duration-200">
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base leading-tight">{evento.nome}</CardTitle>
-                    <Badge variant={evento.status === 'active' ? 'default' : 'secondary'} className="shrink-0 text-xs">
-                      {evento.status === 'active' ? 'Ativo' : evento.status}
-                    </Badge>
-                  </div>
+                  <CardTitle className="text-base leading-tight">{evento.nome}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{evento.local}</span>
+                    <Users className="h-3.5 w-3.5 shrink-0" />
+                    <span>{evento.totalTransacoes} transações</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                    <span>
-                      {formatTimestamp(evento.startDate)} — {formatTimestamp(evento.endDate)}
-                    </span>
+                    <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                    <span>Líquido: {formatCurrency(evento.totalLiquido)}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Ticket className="h-3.5 w-3.5 shrink-0" />
-                    <span>Senha: R$ {evento.valorSenha?.toLocaleString('pt-BR') ?? '—'}</span>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span>Bruto: {formatCurrency(evento.totalBruto)}</span>
+                    <span className="ml-auto">Taxa: {formatCurrency(evento.taxa)}</span>
                   </div>
                 </CardContent>
                 <div className="px-6 pb-4">

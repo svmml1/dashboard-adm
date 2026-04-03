@@ -13,11 +13,14 @@ export default function AdminDashboardPage() {
   const { loadSales } = useMainStore()
   const [data, setData] = useState<AdminDashboard | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const load = () => {
     setLoading(true)
+    setError(false)
     adminService.getDashboard()
       .then(setData)
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }
 
@@ -44,6 +47,18 @@ export default function AdminDashboardPage() {
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Carregando...
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+            <p>Erro ao carregar dashboard. O endpoint pode estar indisponível.</p>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={load}>
+                <RefreshCw className="h-4 w-4 mr-2" /> Tentar novamente
+              </Button>
+              <Button onClick={() => navigate('/admin/eventos')}>
+                Ver Eventos
+              </Button>
+            </div>
           </div>
         ) : !data ? (
           <p className="text-center py-20 text-muted-foreground">Erro ao carregar dados.</p>
